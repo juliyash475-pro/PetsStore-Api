@@ -1,0 +1,76 @@
+defaultTasks 'clean', 'test', 'aggregate'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+buildscript {
+    repositories {
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "net.serenity-bdd:serenity-gradle-plugin:4.0.30"
+        classpath "net.serenity-bdd:serenity-single-page-report:4.0.30"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: "net.serenity-bdd.serenity-gradle-plugin"
+
+sourceCompatibility = 17
+targetCompatibility = 17
+
+ext {
+    serenity_version = '4.0.30'
+    logback_classic_version = '1.2.10'
+    assertj_core_version = '3.23.1'
+}
+
+dependencies {
+    // 🔹 Serenity core y Screenplay
+    testImplementation "net.serenity-bdd:serenity-core:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-junit:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-screenplay:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-screenplay-webdriver:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-ensure:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-rest-assured:${serenity_version}"
+    testImplementation "net.serenity-bdd:serenity-screenplay-rest:${serenity_version}"
+
+    // 🔹 Cucumber 7 compatible con Serenity 4.x
+    testImplementation "net.serenity-bdd:serenity-cucumber:${serenity_version}"
+    testImplementation "io.cucumber:cucumber-java:7.14.0"
+    testImplementation "io.cucumber:cucumber-junit:7.14.0"
+
+    // 🔹 Selenium WebDriver (necesario para compatibilidad con Serenity)
+    testImplementation "org.seleniumhq.selenium:selenium-java:4.13.0"
+
+    // 🔹 Logging y assertions
+    testImplementation "org.assertj:assertj-core:${assertj_core_version}"
+    implementation "ch.qos.logback:logback-classic:${logback_classic_version}"
+
+    // 🔹 JUnit 4 (para @RunWith)
+    testImplementation "junit:junit:4.13.2"
+}
+
+test {
+    useJUnit() // Usa JUnit 4 con Serenity
+    testLogging {
+        showStandardStreams = true
+        events "passed", "skipped", "failed"
+    }
+    finalizedBy aggregate // Genera el reporte Serenity automáticamente
+}
+
+serenity {
+    reports = ["single-page-html"]
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+tasks.named("clearReports").configure {
+    notCompatibleWithConfigurationCache("Serenity clearReports usa project en tiempo de ejecución")
+}
