@@ -1,14 +1,24 @@
 package com.banco.stepdefinitions;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+
 import com.banco.tasks.LoginUser;
+
 import io.cucumber.java.Before;
-import io.cucumber.java.en.*;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
-import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
-import net.serenitybdd.screenplay.rest.interactions.*;
 import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
-import static org.hamcrest.Matchers.*;
+import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
+import net.serenitybdd.screenplay.rest.interactions.Delete;
+import net.serenitybdd.screenplay.rest.interactions.Get;
+import net.serenitybdd.screenplay.rest.interactions.Post;
+import net.serenitybdd.screenplay.rest.interactions.Put;
 
 public class UserStepDefinitions {
 
@@ -72,16 +82,38 @@ public class UserStepDefinitions {
 
     @When("consulta el usuario creado")
     public void queries_the_created_user() {
-        tester.attemptsTo(
-            Get.resource("/user/{username}")
-                .with(req -> req.pathParam("username", username))
-        );
+        int maxRetries = 3;
+        int waitSeconds = 2;
+        String responseUsername = null;
+
+        for (int i = 0; i < maxRetries; i++) {
+            tester.attemptsTo(
+                Get.resource("/user/{username}")
+                    .with(req -> req.pathParam("username", username))
+            );
+
+            responseUsername = SerenityRest.lastResponse().jsonPath().getString("username");
+
+            if (username.equals(responseUsername)) {
+                System.out.println("✅ Usuario encontrado en intento " + (i + 1));
+                break;
+            }
+
+            System.out.println("⚠️ Intento " + (i + 1) + ": Usuario no disponible aún. Reintentando...");
+            try {
+                Thread.sleep(waitSeconds * 1000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        final String finalResponseUsername = responseUsername;
 
         System.out.println("🔵 [GET] Respuesta consulta: " + SerenityRest.lastResponse().asString());
 
         tester.should(
             seeThat("el usuario consultado tiene el nombre correcto",
-                r -> SerenityRest.lastResponse().jsonPath().getString("username"),
+                r -> finalResponseUsername,
                 equalTo(username))
         );
     }
@@ -134,16 +166,36 @@ public class UserStepDefinitions {
 
     @Then("el usuario es eliminado correctamente")
     public void user_is_deleted_correctly() {
-        tester.attemptsTo(
-            Get.resource("/user/{username}")
-                .with(req -> req.pathParam("username", username))
-        );
+        int maxRetries = 3;
+        int waitSeconds = 3;
+        AtomicInteger statusCode = new AtomicInteger(0); // 🔧 permite modificar dentro de lambda
 
-        System.out.println("⚪ [GET after DELETE] Verificación final: " + SerenityRest.lastResponse().asString());
+        for (int i = 0; i < maxRetries; i++) {
+            tester.attemptsTo(
+                Get.resource("/user/{username}")
+                    .with(req -> req.pathParam("username", username))
+            );
+
+            statusCode.set(SerenityRest.lastResponse().statusCode());
+
+            System.out.println("⚪ [GET after DELETE] Intento " + (i + 1) +
+                ": código " + statusCode.get() + " → " + SerenityRest.lastResponse().asString());
+
+            if (statusCode.get() == 404) {
+                System.out.println("✅ Usuario eliminado correctamente en intento " + (i + 1));
+                break;
+            }
+
+            try {
+                Thread.sleep(waitSeconds * 1000L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
 
         tester.should(
             seeThat("el usuario ya no existe",
-                r -> SerenityRest.lastResponse().statusCode(), is(404))
+                r -> statusCode.get(), is(404))
         );
     }
 }
