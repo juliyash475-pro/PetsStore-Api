@@ -8,7 +8,9 @@ import org.junit.runner.RunWith;
 @CucumberOptions(
     features = "src/test/resources/features/user.feature",
     glue = "com.banco.stepdefinitions",
+    snippets = CucumberOptions.SnippetType.CAMELCASE,
     plugin = {"pretty"},
-    snippets = CucumberOptions.SnippetType.CAMELCASE
+    tags = ""
 )
-public class UserTestSuite {}
+public class UserTestSuite {
+}

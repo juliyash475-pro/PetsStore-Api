@@ -1,28 +1,27 @@
 package com.banco.stepdefinitions;
 
+import com.banco.tasks.LoginUser;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.*;
+import net.serenitybdd.rest.SerenityRest;
 import net.serenitybdd.screenplay.Actor;
 import net.serenitybdd.screenplay.rest.abilities.CallAnApi;
 import net.serenitybdd.screenplay.rest.interactions.*;
-import net.serenitybdd.rest.SerenityRest;
-
 import static net.serenitybdd.screenplay.GivenWhenThen.seeThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 public class UserStepDefinitions {
 
     private static final String BASE_URL = "https://petstore.swagger.io/v2";
     private Actor tester;
-
-    // ✅ Username dinámico para evitar conflictos o duplicados
-    private String username = "user_demo_" + System.currentTimeMillis();
+    private String username;
+    private final String password = "1234";
 
     @Before
     public void setUp() {
         tester = Actor.named("Tester");
         tester.can(CallAnApi.at(BASE_URL));
+        username = "user_demo_" + System.currentTimeMillis();
     }
 
     @Given("que el tester tiene acceso a la API de Petstore")
@@ -44,11 +43,11 @@ public class UserStepDefinitions {
               "firstName": "Juan",
               "lastName": "Pérez",
               "email": "juan.perez@example.com",
-              "password": "1234",
+              "password": "%s",
               "phone": "3001234567",
               "userStatus": 1
             }
-        """.formatted(username);
+        """.formatted(username, password);
 
         tester.attemptsTo(
             Post.to("/user")
@@ -57,13 +56,18 @@ public class UserStepDefinitions {
                     .body(body))
         );
 
-        // 🧠 Verificar si realmente se creó correctamente
-        System.out.println("🔹 [POST] Respuesta creación: " + SerenityRest.lastResponse().asString());
+        System.out.println("🟢 [POST] Usuario creado: " + username);
+        System.out.println("Respuesta creación: " + SerenityRest.lastResponse().asString());
 
         tester.should(
-            seeThat("el código de respuesta al crear usuario",
+            seeThat("la creación devuelve 200",
                 response -> SerenityRest.lastResponse().statusCode(), is(200))
         );
+    }
+
+    @When("inicia sesión con el usuario y la contraseña")
+    public void logs_in_with_user_and_password() {
+        tester.attemptsTo(LoginUser.withCredentials(username, password));
     }
 
     @When("consulta el usuario creado")
@@ -73,8 +77,7 @@ public class UserStepDefinitions {
                 .with(req -> req.pathParam("username", username))
         );
 
-        // 🧠 Mostrar la respuesta para entender si el usuario existe
-        System.out.println("🔹 [GET] Respuesta consulta: " + SerenityRest.lastResponse().asString());
+        System.out.println("🔵 [GET] Respuesta consulta: " + SerenityRest.lastResponse().asString());
 
         tester.should(
             seeThat("el usuario consultado tiene el nombre correcto",
@@ -92,11 +95,11 @@ public class UserStepDefinitions {
               "firstName": "Carlos",
               "lastName": "Pérez",
               "email": "carlos.perez@example.com",
-              "password": "abcd",
+              "password": "%s",
               "phone": "3009998888",
               "userStatus": 1
             }
-        """.formatted(username);
+        """.formatted(username, password);
 
         tester.attemptsTo(
             Put.to("/user/{username}")
@@ -106,7 +109,7 @@ public class UserStepDefinitions {
                     .body(updatedBody))
         );
 
-        System.out.println("🔹 [PUT] Respuesta actualización: " + SerenityRest.lastResponse().asString());
+        System.out.println("🟣 [PUT] Respuesta actualización: " + SerenityRest.lastResponse().asString());
 
         tester.should(
             seeThat("la actualización devuelve 200",
@@ -121,7 +124,7 @@ public class UserStepDefinitions {
                 .with(req -> req.pathParam("username", username))
         );
 
-        System.out.println("🔹 [DELETE] Respuesta eliminación: " + SerenityRest.lastResponse().asString());
+        System.out.println("🔴 [DELETE] Respuesta eliminación: " + SerenityRest.lastResponse().asString());
 
         tester.should(
             seeThat("la eliminación devuelve 200",
@@ -136,7 +139,7 @@ public class UserStepDefinitions {
                 .with(req -> req.pathParam("username", username))
         );
 
-        System.out.println("🔹 [GET after DELETE] Verificación final: " + SerenityRest.lastResponse().asString());
+        System.out.println("⚪ [GET after DELETE] Verificación final: " + SerenityRest.lastResponse().asString());
 
         tester.should(
             seeThat("el usuario ya no existe",

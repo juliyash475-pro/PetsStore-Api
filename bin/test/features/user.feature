@@ -1,8 +1,13 @@
-Feature: Compra exitosa en SauceDemo
+Feature: Gestión de usuarios en Petstore API
+  Para garantizar la correcta interacción con la API de Petstore
+  Como tester de la aplicación
+  Quiero crear, iniciar sesión, consultar, actualizar y eliminar un usuario
 
-  Scenario: Usuario realiza una compra completa
-    Given el usuario accede a la web de SauceDemo
-    When inicia sesión con usuario "standard_user" y contraseña "secret_sauce"
-    And agrega el producto "Sauce Labs Backpack" al carrito
-    And completa el proceso de compra
-    Then debería ver el mensaje "Thank you for your order!"
+  Scenario: Crear, iniciar sesión, consultar, actualizar y eliminar un usuario
+    Given que el tester tiene acceso a la API de Petstore
+    When crea un nuevo usuario
+    And inicia sesión con el usuario y la contraseña
+    And consulta el usuario creado
+    And actualiza la información del usuario
+    And elimina el usuario
+    Then el usuario es eliminado correctamente
